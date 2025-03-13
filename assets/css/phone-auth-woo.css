@@ -1,0 +1,53 @@
+.phone-auth-container {
+    margin-bottom: 20px;
+}
+
+.phone-auth-field {
+    margin-bottom: 15px;
+}
+
+.phone-auth-otp-section {
+    margin-top: 15px;
+    padding: 15px;
+    background: #f8f8f8;
+    border-radius: 4px;
+}
+
+.otp-timer {
+    font-size: 14px;
+    color: #666;
+    margin: 10px 0;
+}
+
+.phone-auth-actions {
+    margin-top: 15px;
+}
+
+.phone-auth-messages {
+    margin-top: 15px;
+    padding: 10px;
+    display: none;
+}
+
+.phone-auth-messages.error {
+    background: #fff6f6;
+    color: #9f3a38;
+    border: 1px solid #e0b4b4;
+}
+
+.phone-auth-messages.success {
+    background: #fcfff5;
+    color: #2c662d;
+    border: 1px solid #a3c293;
+}
+
+#phone_otp {
+    letter-spacing: 4px;
+    font-size: 18px;
+    text-align: center;
+}
+
+.resend-disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}

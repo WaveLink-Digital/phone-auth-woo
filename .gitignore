@@ -1,0 +1,17 @@
+# Operating System Files
+.DS_Store
+Thumbs.db
+
+# IDE Files
+.idea/
+.vscode/
+*.sublime-project
+*.sublime-workspace
+
+# Dependencies
+/vendor/
+/node_modules/
+
+# Build Files
+*.log
+*.zip
