@@ -1,15 +1,19 @@
 jQuery(function($) {
-    const phoneAuthContainer = $('.phone-auth-container');
-    const otpSection = $('.phone-auth-otp-section');
-    const messageBox = $('.phone-auth-messages');
-    let timer;
+    $('.phone-auth-container').each(function() {
+        const container = $(this);
+        const instanceId = container.data('instance');
+        const otpSection = container.find('.phone-auth-otp-section');
+        const messageBox = container.find('.phone-auth-messages');
+        const sendButton = container.find('#send-otp-button_' + instanceId);
+        const resendButton = container.find('#resend-otp-button_' + instanceId);
+        const phoneInput = container.find('#phone_number_' + instanceId);
+        const otpInput = container.find('#phone_otp_' + instanceId);
+        let timer;
 
-    function startTimer() {
-        let timeLeft = 120; // 2 minutes
-        const countdownDisplay = $('.countdown');
-        const resendButton = $('#resend-otp-button');
-
-        resendButton.addClass('resend-disabled');
+        function startTimer() {
+            let timeLeft = 120; // 2 minutes
+            const countdownDisplay = container.find('.countdown');
+            resendButton.addClass('resend-disabled');
         
         timer = setInterval(function() {
             const minutes = Math.floor(timeLeft / 60);
@@ -36,14 +40,14 @@ jQuery(function($) {
             .show();
     }
 
-    $('#send-otp-button, #resend-otp-button').on('click', function() {
-        const phoneNumber = $('#phone_number').val();
-        const button = $(this);
+        sendButton.add(resendButton).on('click', function() {
+            const phoneNumber = phoneInput.val();
+            const button = $(this);
 
-        if (!phoneNumber) {
-            showMessage('Please enter your phone number.', 'error');
-            return;
-        }
+            if (!phoneNumber) {
+                showMessage('Please enter your phone number.', 'error');
+                return;
+            }
 
         button.prop('disabled', true);
 
@@ -53,13 +57,14 @@ jQuery(function($) {
             data: {
                 action: 'send_phone_otp',
                 phone_number: phoneNumber,
-                nonce: phoneAuthWoo.nonce
+                nonce: phoneAuthWoo.nonce,
+                _ajax_nonce: phoneAuthWoo.nonce
             },
             success: function(response) {
                 if (response.success) {
                     otpSection.show();
-                    $('#send-otp-button').hide();
-                    $('#resend-otp-button').show();
+                    sendButton.hide();
+                    resendButton.show();
                     startTimer();
                     showMessage('Verification code sent successfully!', 'success');
                 } else {
@@ -75,16 +80,16 @@ jQuery(function($) {
         });
     });
 
-    $('#phone_otp').on('input', function() {
-        const otp = $(this).val();
-        
-        if (otp.length === 6) {
+        otpInput.on('input', function() {
+            const otp = $(this).val();
+            
+            if (otp.length === 6) {
             $.ajax({
                 url: phoneAuthWoo.ajax_url,
                 type: 'POST',
                 data: {
                     action: 'verify_phone_otp',
-                    phone_number: $('#phone_number').val(),
+                    phone_number: phoneInput.val(),
                     otp: otp,
                     nonce: phoneAuthWoo.nonce
                 },
@@ -94,7 +99,7 @@ jQuery(function($) {
                         clearInterval(timer);
                         // Submit the form after successful verification
                         setTimeout(() => {
-                            phoneAuthContainer.closest('form').submit();
+                            container.closest('form').submit();
                         }, 1000);
                     } else {
                         showMessage(response.data, 'error');
@@ -102,13 +107,14 @@ jQuery(function($) {
                 },
                 error: function(xhr, status, error) {
                     showMessage(
-                        'Network error occurred. Please try again. Error: ' + 
-                        (error || 'Unknown error'),
+                        'Network error occurred. Please try again. Status: ' + 
+                        status + '. Error: ' + (error || 'Unknown error'),
                         'error'
                     );
                 },
                 timeout: 10000 // 10 second timeout
             });
         }
+            });
+        });
     });
-});

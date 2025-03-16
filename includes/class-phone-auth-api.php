@@ -26,10 +26,13 @@ class Phone_Auth_API {
                 $otp,
                 5 * MINUTE_IN_SECONDS
             );
-            return true;
+            return ['success' => true];
         }
 
-        return false;
+        return [
+            'success' => false,
+            'message' => isset($response['message']) ? $response['message'] : __('Failed to send verification code', 'phone-auth-woo')
+        ];
     }
 
     public function verify_otp($phone_number, $otp) {

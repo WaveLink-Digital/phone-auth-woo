@@ -25,14 +25,32 @@ class Phone_Auth_Settings {
         if (empty($value)) {
             return '';
         }
-        return wp_encrypt_password($value);
+        if (!function_exists('openssl_encrypt')) {
+            return base64_encode($value);
+        }
+        $encryption_key = wp_salt('auth');
+        $iv = openssl_random_pseudo_bytes(openssl_cipher_iv_length('AES-256-CBC'));
+        $encrypted = openssl_encrypt($value, 'AES-256-CBC', $encryption_key, 0, $iv);
+        return base64_encode($iv . $encrypted);
     }
 
     private function decrypt_value($encrypted_value) {
         if (empty($encrypted_value)) {
             return '';
         }
-        return wp_check_password($encrypted_value);
+        try {
+            if (!function_exists('openssl_decrypt')) {
+                return base64_decode($encrypted_value);
+            }
+            $encryption_key = wp_salt('auth');
+            $decoded = base64_decode($encrypted_value);
+            $iv_length = openssl_cipher_iv_length('AES-256-CBC');
+            $iv = substr($decoded, 0, $iv_length);
+            $encrypted = substr($decoded, $iv_length);
+            return openssl_decrypt($encrypted, 'AES-256-CBC', $encryption_key, 0, $iv);
+        } catch (\Exception $e) {
+            return '';
+        }
     }
 
     public function api_key_callback() {

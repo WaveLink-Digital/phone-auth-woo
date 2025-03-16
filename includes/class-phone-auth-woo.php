@@ -16,8 +16,10 @@ class Phone_Auth_Woo {
         add_action('wp_enqueue_scripts', [$this, 'enqueue_scripts']);
         add_action('woocommerce_login_form', [$this, 'add_phone_login_field']);
         add_action('woocommerce_register_form', [$this, 'add_phone_register_field']);
+        add_action('woocommerce_edit_account_form', [$this, 'add_phone_login_field']);
         add_filter('woocommerce_process_login_errors', [$this, 'validate_phone_login'], 10, 3);
         add_filter('woocommerce_process_registration_errors', [$this, 'validate_phone_registration'], 10, 4);
+        add_action('woocommerce_save_account_details', [$this, 'validate_account_details']);
         
         // AJAX handlers
         add_action('wp_ajax_nopriv_send_phone_otp', [$this, 'send_phone_otp']);
@@ -59,7 +61,10 @@ class Phone_Auth_Woo {
     }
 
     public function send_phone_otp() {
-        check_ajax_referer('phone-auth-woo', 'nonce');
+        if (!check_ajax_referer('phone-auth-woo', 'nonce', false)) {
+            wp_send_json_error('Invalid security token. Please refresh the page and try again.');
+            return;
+        }
 
         $phone_number = isset($_POST['phone_number']) ? sanitize_text_field($_POST['phone_number']) : '';
         
@@ -75,9 +80,9 @@ class Phone_Auth_Woo {
         }
 
         // Send OTP
-        $sent = $this->api->send_otp($validated_number);
-        if (!$sent) {
-            wp_send_json_error(__('Failed to send verification code. Please try again.', 'phone-auth-woo'));
+        $result = $this->api->send_otp($validated_number);
+        if (!$result['success']) {
+            wp_send_json_error($result['message']);
         }
 
         wp_send_json_success();
@@ -151,5 +156,39 @@ class Phone_Auth_Woo {
         });
 
         return $validation_error;
+    }
+
+    public function validate_account_details($user_id) {
+        try {
+            $phone_number = isset($_POST['phone_number']) ? sanitize_text_field($_POST['phone_number']) : '';
+            
+            if (empty($phone_number)) {
+                throw new \Exception(__('Phone verification is required.', 'phone-auth-woo'));
+            }
+
+            $validated_number = $this->validator->validate_phone_number($phone_number);
+            if (is_wp_error($validated_number)) {
+                throw new \Exception($validated_number->get_error_message());
+            }
+
+            // Check if the phone number belongs to another user
+            $existing_user = get_users([
+                'meta_key' => '_phone_number',
+                'meta_value' => $validated_number,
+                'exclude' => [$user_id],
+                'number' => 1
+            ]);
+
+            if (!empty($existing_user)) {
+                throw new \Exception(__('This phone number is already registered to another account.', 'phone-auth-woo'));
+            }
+
+            // Update the phone number
+            update_user_meta($user_id, '_phone_number', $validated_number);
+        } catch (\Exception $e) {
+            wc_add_notice($e->getMessage(), 'error');
+            wp_safe_redirect(wc_get_account_endpoint_url('edit-account'));
+            exit;
+        }
     }
 }
